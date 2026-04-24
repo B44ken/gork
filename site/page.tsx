@@ -1,7 +1,14 @@
 import { hydrateRoot } from 'react-dom/client'
 import { useEffect, useMemo, useState } from 'react'
 
-type AuthState = { authenticated: boolean; actor: string | null; csrfToken: string | null; passwordRequired: boolean }
+type AuthState = {
+    authenticated: boolean
+    actor: string | null
+    csrfToken: string | null
+    passwordConfigured: boolean
+    authSource: 'stored' | 'env' | 'legacy-env' | 'none'
+    updatedAt: string | null
+}
 type UserRow = {
     id: string
     displayName: string
@@ -42,7 +49,7 @@ type Analytics = {
     topUsers7d: { userId: string; displayName: string; cost: number; mentions: number }[]
 }
 
-type Tab = 'facts' | 'leaderboard' | 'analytics' | 'config' | 'audit'
+type Tab = 'facts' | 'leaderboard' | 'analytics' | 'auth' | 'config' | 'audit'
 type SortKey = 'displayName' | 'mentions' | 'total_tokens_in' | 'total_tokens_out' | 'total_tokens_cache' | 'cost'
 type SortDirection = 'asc' | 'desc'
 
@@ -61,7 +68,7 @@ const fmtJson = (value: unknown) => {
 }
 
 export const Page = () => {
-    const [auth, setAuth] = useState<AuthState>({ authenticated: false, actor: null, csrfToken: null, passwordRequired: true })
+    const [auth, setAuth] = useState<AuthState>({ authenticated: false, actor: null, csrfToken: null, passwordConfigured: false, authSource: 'none', updatedAt: null })
     const [loginActor, setLoginActor] = useState('admin')
     const [loginPassword, setLoginPassword] = useState('')
     const [loginError, setLoginError] = useState('')
@@ -84,6 +91,9 @@ export const Page = () => {
     const [sortState, setSortState] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'cost', direction: 'desc' })
     const [mutedInput, setMutedInput] = useState('')
     const [deniedInput, setDeniedInput] = useState('')
+    const [currentPassword, setCurrentPassword] = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
 
     const csrfHeaders = () => auth.csrfToken ? { 'x-csrf-token': auth.csrfToken } : {}
 
@@ -219,6 +229,20 @@ export const Page = () => {
         await reloadAll()
     })
 
+    const savePassword = () => run(async () => {
+        if (!newPassword.trim()) throw new Error('New password is required')
+        if (newPassword !== confirmPassword) throw new Error('Passwords do not match')
+        const updated = await postJson('/auth/password', {
+            currentPassword,
+            newPassword,
+        }) as Pick<AuthState, 'passwordConfigured' | 'authSource' | 'updatedAt'>
+        setAuth((prev) => ({ ...prev, ...updated }))
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        await refreshAuth()
+    })
+
     const toggleFactSelection = (userId: string, fact: string, checked: boolean) => {
         setSelectedFacts((prev) => {
             const before = new Set(prev[userId] ?? [])
@@ -270,6 +294,10 @@ export const Page = () => {
                         <div>
                             <h1 className='text-2xl font-semibold'>Gork Admin Dashboard</h1>
                             <p className='mt-2 text-sm text-white/80'>Facts, usage analytics, config, and security controls.</p>
+                            {auth.authenticated && <p className='mt-2 text-xs text-white/70'>
+                                Auth source: <span className='font-medium text-white'>{auth.authSource}</span>
+                                {auth.updatedAt && <span> · updated {new Date(auth.updatedAt).toLocaleString()}</span>}
+                            </p>}
                         </div>
                         {auth.authenticated && <div className='text-right text-sm text-white/80'>
                             <p>Signed in as <span className='font-semibold text-white'>{auth.actor}</span></p>
@@ -281,6 +309,9 @@ export const Page = () => {
                 {!auth.authenticated && <section className='mx-auto max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5'>
                     <h2 className='mb-4 text-lg font-semibold'>Login</h2>
                     <div className='space-y-3'>
+                        <p className='text-xs text-white/70'>
+                            {auth.passwordConfigured ? `Password source: ${auth.authSource}` : 'No dashboard password configured yet.'}
+                        </p>
                         <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
                             placeholder='actor name'
                             value={loginActor}
@@ -306,6 +337,7 @@ export const Page = () => {
                             ['facts', 'Facts'],
                             ['leaderboard', 'Leaderboard'],
                             ['analytics', 'Analytics'],
+                            ['auth', 'Auth'],
                             ['config', 'Config & Safety'],
                             ['audit', 'Audit Log'],
                         ].map(([key, label]) => (
@@ -496,6 +528,51 @@ export const Page = () => {
                                 ))}
                             </div>
                         </article>
+                    </section>}
+
+                    {activeTab == 'auth' && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                        <h2 className='mb-4 text-lg font-semibold'>Dashboard Password</h2>
+                        <p className='mb-4 text-sm text-white/75'>
+                            Set a dedicated dashboard password here. After saving, the dashboard will stop using the legacy fallback secret.
+                        </p>
+                        <div className='grid gap-3 md:grid-cols-3'>
+                            <input
+                                className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                type='password'
+                                placeholder='current password'
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                disabled={busy}
+                            />
+                            <input
+                                className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                type='password'
+                                placeholder='new password'
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                disabled={busy}
+                            />
+                            <input
+                                className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                type='password'
+                                placeholder='confirm new password'
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                disabled={busy}
+                            />
+                        </div>
+                        <div className='mt-4 flex flex-wrap items-center gap-3'>
+                            <button
+                                className='rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60'
+                                onClick={savePassword}
+                                disabled={busy}
+                            >
+                                Update Password
+                            </button>
+                            <span className='text-xs text-white/70'>
+                                Minimum 12 characters recommended.
+                            </span>
+                        </div>
                     </section>}
 
                     {activeTab == 'config' && cfg && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5'>

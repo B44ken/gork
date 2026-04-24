@@ -4,6 +4,8 @@ import { renderToReadableStream } from 'react-dom/server'
 import * as memory from '../bot/memory'
 import * as config from '../bot/config'
 import * as audit from '../bot/audit'
+import * as auth from '../bot/auth'
+import { getSessionSecret } from '../bot/session'
 
 const { outputs } = await Bun.build({ entrypoints: ['./site/page.tsx'], target: 'browser' })
 const js = await outputs[0].text()
@@ -11,8 +13,7 @@ const js = await outputs[0].text()
 type SessionPayload = { exp: number; csrf: string; actor: string }
 const SESSION_COOKIE = 'gork_session'
 const sessionTtlMs = 7 * 24 * 60 * 60 * 1000
-const dashboardPassword = process.env.DASHBOARD_PASSWORD ?? process.env.DISCORD_TOKEN ?? process.env.OPENROUTER_API_KEY
-const sessionSecret = process.env.DASHBOARD_SESSION_SECRET ?? dashboardPassword ?? randomBytes(24).toString('hex')
+const sessionSecret = getSessionSecret()
 const trustProxyHeaders = process.env.TRUST_PROXY_HEADERS == 'true'
 const rateBuckets = new Map<string, number[]>()
 const revokedTokens = new Map<string, number>()
@@ -178,11 +179,14 @@ Bun.serve({
 
     if (path == '/auth/status') {
       const session = readSession(req)
+      const authStatus = auth.getAuthStatus()
       return Response.json({
         authenticated: Boolean(session),
         actor: session?.actor ?? null,
         csrfToken: session?.csrf ?? null,
-        passwordRequired: Boolean(dashboardPassword),
+        passwordConfigured: authStatus.passwordConfigured,
+        authSource: authStatus.authSource,
+        updatedAt: authStatus.updatedAt,
       })
     }
 
@@ -194,10 +198,9 @@ Bun.serve({
       }
       const body = await parseJsonBody(req)
       if (!body) return new Response('Invalid JSON payload', { status: 400 })
-      if (!dashboardPassword) return new Response('Dashboard password is not configured', { status: 500 })
       const password = getString(body, 'password')
       const actor = getString(body, 'actor') || 'admin'
-      if (!secureEq(password, dashboardPassword)) return new Response('Invalid credentials', { status: 401 })
+      if (!auth.verifyPassword(password)) return new Response('Invalid credentials', { status: 401 })
 
       const token = encodeSession({ exp: Date.now() + sessionTtlMs, csrf: randomBytes(24).toString('hex'), actor })
       return new Response(JSON.stringify({ ok: true }), {
@@ -214,6 +217,23 @@ Bun.serve({
       return new Response(JSON.stringify({ ok: true }), {
         headers: { 'Content-Type': 'application/json', 'Set-Cookie': clearCookie(req) },
       })
+    }
+
+    if (path == '/auth/password') {
+      if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
+      if (!hitGuardedRateLimit('write', ip, 60, 60 * 1000)) return new Response('Too many requests', { status: 429 })
+      const { session, response } = requireAuth(req)
+      if (response) return response
+      const csrfErr = requireCsrf(req, session!)
+      if (csrfErr) return csrfErr
+      const body = await parseJsonBody(req)
+      if (!body) return new Response('Invalid JSON payload', { status: 400 })
+      const currentPassword = getString(body, 'currentPassword')
+      const newPassword = getString(body, 'newPassword')
+      if (!newPassword) return new Response('"newPassword" is required', { status: 400 })
+      const status = auth.setPassword(currentPassword, newPassword)
+      audit.logAudit({ actor: session!.actor, ip, action: 'auth.password.update', details: { authSource: status.authSource } })
+      return Response.json(status)
     }
 
     if (path == '/load') {

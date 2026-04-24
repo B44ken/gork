@@ -5,11 +5,13 @@
     "start": "npm run site & npm run bot & wait",
     "site": "bun --jsx site/main.tsx",
     "bot": "bun --no-deprecation bot/main.ts",
-    "bot-node": "tsx --no-deprecation bot/main.ts"
+    "bot-node": "tsx --no-deprecation bot/main.ts",
+    "build": "echo 'No build required'"
   },
   "dependencies": {
     "@openrouter/sdk": "latest",
     "b44ui": "latest",
+    "bun": "^1.3.13",
     "discord.js": "latest",
     "dotenv": "latest",
     "exa-js": "latest",

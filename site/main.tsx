@@ -236,6 +236,31 @@ Bun.serve({
       return Response.json(status)
     }
 
+    if (path == '/users/create') {
+      if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
+      if (!hitGuardedRateLimit('write', ip, 120, 60 * 1000)) return new Response('Too many requests', { status: 429 })
+      const { session, response } = requireAuth(req)
+      if (response) return response
+      const csrfErr = requireCsrf(req, session!)
+      if (csrfErr) return csrfErr
+      const readOnlyErr = ensureWriteAllowed()
+      if (readOnlyErr) return readOnlyErr
+      const body = await parseJsonBody(req)
+      if (!body) return new Response('Invalid JSON payload', { status: 400 })
+      const userId = getString(body, 'userId')
+      const displayName = getString(body, 'displayName')
+      if (!userId) return new Response('"userId" is required', { status: 400 })
+      memory.upsertUserIdentity({ userId, displayName: displayName || userId })
+      audit.logAudit({
+        actor: session!.actor,
+        ip,
+        action: 'user.create',
+        userId,
+        displayName: displayName || userId,
+      })
+      return Response.json({ ok: true })
+    }
+
     if (path == '/load') {
       const { response } = requireAuth(req)
       if (response) return response

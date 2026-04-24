@@ -81,6 +81,8 @@ export const Page = () => {
     const [auditRows, setAuditRows] = useState<AuditRow[]>([])
     const [cfg, setCfg] = useState<BotConfig | null>(null)
 
+    const [createUserId, setCreateUserId] = useState('')
+    const [createUserName, setCreateUserName] = useState('')
     const [addUserId, setAddUserId] = useState('')
     const [addDisplayName, setAddDisplayName] = useState('')
     const [addFact, setAddFact] = useState('')
@@ -181,6 +183,16 @@ export const Page = () => {
         if (!fact || !userId) throw new Error('User ID and fact are required')
         await postJson('/facts/add', { userId, displayName, user: displayName || userId, fact })
         setAddFact('')
+        await reloadAll()
+    })
+
+    const createUser = () => run(async () => {
+        const userId = createUserId.trim()
+        const displayName = createUserName.trim()
+        if (!userId) throw new Error('User ID is required')
+        await postJson('/users/create', { userId, displayName })
+        setCreateUserId('')
+        setCreateUserName('')
         await reloadAll()
     })
 
@@ -289,7 +301,7 @@ export const Page = () => {
         </head>
         <main className='min-h-screen bg-slate-950 text-white'>
             <div className='mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6'>
-                <header className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                <header className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                     <div className='flex flex-wrap items-start justify-between gap-4'>
                         <div>
                             <h1 className='text-2xl font-semibold'>Gork Admin Dashboard</h1>
@@ -306,7 +318,7 @@ export const Page = () => {
                     </div>
                 </header>
 
-                {!auth.authenticated && <section className='mx-auto max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                {!auth.authenticated && <section className='mx-auto max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                     <h2 className='mb-4 text-lg font-semibold'>Login</h2>
                     <div className='space-y-3'>
                         <p className='text-xs text-white/70'>
@@ -332,7 +344,7 @@ export const Page = () => {
                 </section>}
 
                 {auth.authenticated && <>
-                    <nav className='flex flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900 p-3'>
+                    <nav className='flex flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900 p-3 text-white'>
                         {[
                             ['facts', 'Facts'],
                             ['leaderboard', 'Leaderboard'],
@@ -354,7 +366,33 @@ export const Page = () => {
                     {error && <section className='rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-200'>{error}</section>}
 
                     {activeTab == 'facts' && <section className='space-y-4'>
-                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
+                            <h2 className='mb-4 text-lg font-semibold'>Create User</h2>
+                            <p className='mb-4 text-sm text-white/75'>
+                                Create an identity row before any facts exist. The bot will keep display names refreshed when it sees the user again.
+                            </p>
+                            <div className='grid gap-3 md:grid-cols-2'>
+                                <input
+                                    className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                    value={createUserId}
+                                    onChange={(e) => setCreateUserId(e.target.value)}
+                                    placeholder='discord user id'
+                                    disabled={busy}
+                                />
+                                <input
+                                    className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                    value={createUserName}
+                                    onChange={(e) => setCreateUserName(e.target.value)}
+                                    placeholder='display name'
+                                    disabled={busy}
+                                />
+                            </div>
+                            <button className='mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={createUser} disabled={busy}>
+                                Create User
+                            </button>
+                        </article>
+
+                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                             <h2 className='mb-4 text-lg font-semibold'>Add Fact</h2>
                             <div className='grid gap-3 md:grid-cols-4'>
                                 <input className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
@@ -379,7 +417,7 @@ export const Page = () => {
                         </article>
 
                         {users.map((user) => (
-                            <article key={user.id} className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                            <article key={user.id} className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                                 <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
                                     <div>
                                         <h3 className='text-base font-semibold'>{user.displayName}</h3>
@@ -452,7 +490,7 @@ export const Page = () => {
                         ))}
                     </section>}
 
-                    {activeTab == 'leaderboard' && <section className='overflow-hidden rounded-xl border border-slate-800 bg-slate-900'>
+                    {activeTab == 'leaderboard' && <section className='overflow-hidden rounded-xl border border-slate-800 bg-slate-900 text-white'>
                         <div className='overflow-x-auto'>
                             <table className='min-w-full border-collapse text-sm'>
                                 <thead className='bg-slate-950/70'>
@@ -493,7 +531,7 @@ export const Page = () => {
                     </section>}
 
                     {activeTab == 'analytics' && <section className='space-y-4'>
-                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                             <h2 className='mb-3 text-lg font-semibold'>Burn Rate</h2>
                             <div className='grid gap-3 sm:grid-cols-3'>
                                 <div className='rounded-md border border-slate-800 bg-slate-950 p-3'>
@@ -511,7 +549,7 @@ export const Page = () => {
                             </div>
                         </article>
 
-                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                             <h2 className='mb-3 text-lg font-semibold'>Top Users (7 days)</h2>
                             <div className='space-y-2'>
                                 {(analytics?.topUsers7d ?? []).map((row) => (
@@ -530,7 +568,7 @@ export const Page = () => {
                         </article>
                     </section>}
 
-                    {activeTab == 'auth' && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                    {activeTab == 'auth' && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                         <h2 className='mb-4 text-lg font-semibold'>Dashboard Password</h2>
                         <p className='mb-4 text-sm text-white/75'>
                             Set a dedicated dashboard password here. After saving, the dashboard will stop using the legacy fallback secret.
@@ -575,7 +613,7 @@ export const Page = () => {
                         </div>
                     </section>}
 
-                    {activeTab == 'config' && cfg && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5'>
+                    {activeTab == 'config' && cfg && <section className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                         <h2 className='mb-4 text-lg font-semibold'>Bot Configuration & Safety Controls</h2>
                         <div className='grid gap-3 md:grid-cols-3'>
                             <label className='text-sm'>
@@ -646,7 +684,7 @@ export const Page = () => {
                         </button>
                     </section>}
 
-                    {activeTab == 'audit' && <section className='overflow-hidden rounded-xl border border-slate-800 bg-slate-900'>
+                    {activeTab == 'audit' && <section className='overflow-hidden rounded-xl border border-slate-800 bg-slate-900 text-white'>
                         <div className='overflow-x-auto'>
                             <table className='min-w-full border-collapse text-sm'>
                                 <thead className='bg-slate-950/70'>

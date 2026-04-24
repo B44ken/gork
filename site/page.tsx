@@ -98,14 +98,16 @@ export const Page = () => {
         })
     }
 
-    const usageRows: UsageRow[] = Object.entries(data).map(([name, row]) => ({
-        user: name,
-        mentions: numberOrZero(row.mentions),
-        total_tokens_in: numberOrZero(row.total_tokens_in),
-        total_tokens_out: numberOrZero(row.total_tokens_out),
-        total_tokens_cache: numberOrZero(row.total_tokens_cache),
-        cost: numberOrZero(row.cost),
-    }))
+    const usageRows: UsageRow[] = Object.entries(data)
+        .filter(([name]) => name.toLowerCase() != 'gork')
+        .map(([name, row]) => ({
+            user: name,
+            mentions: numberOrZero(row.mentions),
+            total_tokens_in: numberOrZero(row.total_tokens_in),
+            total_tokens_out: numberOrZero(row.total_tokens_out),
+            total_tokens_cache: numberOrZero(row.total_tokens_cache),
+            cost: numberOrZero(row.cost),
+        }))
 
     const sortedUsageRows = [...usageRows].sort((a, b) => {
         const value = sortState.key == 'user'
@@ -131,23 +133,23 @@ export const Page = () => {
             <script src='https://cdn.tailwindcss.com'></script>
             <title>gork memory dashboard</title>
         </head>
-        <main className='min-h-screen bg-slate-950 text-slate-100'>
+        <main className='min-h-screen bg-slate-950 text-white'>
             <div className='mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6'>
                 <header className='space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-5'>
                     <div>
                         <h1 className='text-2xl font-semibold'>Gork Memory Dashboard</h1>
-                        <p className='mt-2 text-sm text-slate-300'>Manage facts and OpenRouter usage in one place.</p>
+                        <p className='mt-2 text-sm text-white/90'>Manage facts and OpenRouter usage in one place.</p>
                     </div>
 
                     <nav className='flex flex-wrap gap-2'>
                         <button
-                            className={`rounded-md px-4 py-2 text-sm font-medium transition ${viewMode == 'facts' ? 'bg-blue-600 text-white' : 'border border-slate-700 text-slate-200 hover:bg-slate-800'}`}
+                            className={`rounded-md px-4 py-2 text-sm font-medium transition ${viewMode == 'facts' ? 'bg-blue-600 text-white' : 'border border-slate-700 text-white hover:bg-slate-800'}`}
                             onClick={() => setViewMode('facts')}
                         >
                             Facts
                         </button>
                         <button
-                            className={`rounded-md px-4 py-2 text-sm font-medium transition ${viewMode == 'leaderboard' ? 'bg-blue-600 text-white' : 'border border-slate-700 text-slate-200 hover:bg-slate-800'}`}
+                            className={`rounded-md px-4 py-2 text-sm font-medium transition ${viewMode == 'leaderboard' ? 'bg-blue-600 text-white' : 'border border-slate-700 text-white hover:bg-slate-800'}`}
                             onClick={() => setViewMode('leaderboard')}
                         >
                             Usage Leaderboard
@@ -199,7 +201,7 @@ export const Page = () => {
                                     </button>
                                 </div>
 
-                                {facts.length === 0 && <p className='text-sm text-slate-400'>No facts saved yet.</p>}
+                                {facts.length === 0 && <p className='text-sm text-white/80'>No facts saved yet.</p>}
                                 <ul className='space-y-2'>
                                     {facts.map((f, i) => (
                                         <li className='rounded-md border border-slate-800 bg-slate-950 p-3' key={`${u}-${i}-${f}`}>
@@ -230,7 +232,7 @@ export const Page = () => {
                                                 </div>
                                             ) : (
                                                 <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
-                                                    <p className='text-sm text-slate-200'>{f}</p>
+                                                    <p className='text-sm text-white'>{f}</p>
                                                     <div className='flex shrink-0 gap-2'>
                                                         <button
                                                             className='rounded-md border border-slate-700 px-3 py-1 text-xs hover:bg-slate-800 disabled:opacity-60'
@@ -271,13 +273,13 @@ export const Page = () => {
                                             ['total_tokens_cache', 'Tokens Cache'],
                                             ['cost', 'Cost (USD)'],
                                         ].map(([key, label]) => (
-                                            <th className='border-b border-slate-800 px-4 py-3 text-left font-medium text-slate-200' key={key}>
+                                            <th className='border-b border-slate-800 px-4 py-3 text-left font-medium text-white' key={key}>
                                                 <button
                                                     className='inline-flex items-center gap-2 hover:text-white'
                                                     onClick={() => toggleSort(key as SortKey)}
                                                 >
                                                     {label}
-                                                    <span className='text-xs text-slate-400'>{sortArrow(key as SortKey)}</span>
+                                                    <span className='text-xs text-white/70'>{sortArrow(key as SortKey)}</span>
                                                 </button>
                                             </th>
                                         ))}

@@ -5,18 +5,94 @@ if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set')
 
 export type UsageStats = { inputTokens: number; outputTokens: number; cachedTokens: number; cost: number }
 type ChatOut = { content: string; usage: UsageStats }
+type ModelPricing = { prompt: number; completion: number; inputCacheRead: number }
 
 const or = new OpenRouter({ apiKey })
 const tools: any[] = []
 const handlers: { [key: string]: (args: any) => any } = {}
+let pricingCache: Record<string, ModelPricing> | null = null
 
 const numberOrZero = (value: unknown): number => typeof value == 'number' && Number.isFinite(value) ? value : 0
+const pickNumber = (...values: unknown[]) => {
+    for (const value of values) {
+        if (typeof value == 'number' && Number.isFinite(value)) return value
+    }
+    return undefined
+}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const mergeUsage = (a: UsageStats, b: UsageStats): UsageStats => ({
     inputTokens: a.inputTokens + b.inputTokens,
     outputTokens: a.outputTokens + b.outputTokens,
     cachedTokens: a.cachedTokens + b.cachedTokens,
     cost: a.cost + b.cost,
 })
+
+const parseModelPricing = (value: unknown): ModelPricing => {
+    const raw = typeof value == 'object' && value !== null ? value as Record<string, unknown> : {}
+    return {
+        prompt: Number.parseFloat(String(raw.prompt ?? 0)) || 0,
+        completion: Number.parseFloat(String(raw.completion ?? 0)) || 0,
+        inputCacheRead: Number.parseFloat(String(raw.input_cache_read ?? 0)) || 0,
+    }
+}
+
+const getPricingCache = async (): Promise<Record<string, ModelPricing>> => {
+    if (pricingCache) return pricingCache
+    const res = await fetch('https://openrouter.ai/api/v1/models')
+    if (!res.ok) throw new Error(`failed to load model pricing: ${res.status}`)
+    const payload = await res.json() as { data?: { id?: string; pricing?: unknown }[] }
+    pricingCache = Object.fromEntries((payload.data ?? [])
+        .map((row) => [row.id ?? '', parseModelPricing(row.pricing)] as const)
+        .filter(([id]) => Boolean(id)))
+    return pricingCache
+}
+
+const resolvePricingForModel = (index: Record<string, ModelPricing>, model: string): ModelPricing | undefined => {
+    if (index[model]) return index[model]
+    const fallbackId = Object.keys(index)
+        .filter((id) => model.startsWith(`${id}-`))
+        .sort((a, b) => b.length - a.length)[0]
+    return fallbackId ? index[fallbackId] : undefined
+}
+
+const estimateCostFromPricing = async (model: string, usage: UsageStats): Promise<number> => {
+    try {
+        const pricing = resolvePricingForModel(await getPricingCache(), model)
+        if (!pricing) return usage.cost
+
+        const cached = Math.max(0, usage.cachedTokens)
+        const prompt = Math.max(0, usage.inputTokens - cached)
+        const completion = Math.max(0, usage.outputTokens)
+        const cachePrice = pricing.inputCacheRead || pricing.prompt
+        return prompt * pricing.prompt + cached * cachePrice + completion * pricing.completion
+    } catch (error) {
+        console.error('failed to estimate model cost', error)
+        return usage.cost
+    }
+}
+
+const readGenerationUsage = async (id: string, fallback: UsageStats): Promise<UsageStats> => {
+    let lastError: unknown
+    for (const waitMs of [0, 300, 1200]) {
+        if (waitMs) await sleep(waitMs)
+        try {
+            const generation = await or.generations.getGeneration({ id })
+            return {
+                inputTokens: pickNumber(generation.data.tokensPrompt, fallback.inputTokens) ?? 0,
+                outputTokens: pickNumber(generation.data.tokensCompletion, fallback.outputTokens) ?? 0,
+                cachedTokens: pickNumber(generation.data.nativeTokensCached, fallback.cachedTokens) ?? 0,
+                cost: pickNumber(generation.data.totalCost, generation.data.usage, fallback.cost) ?? 0,
+            }
+        } catch (error) {
+            lastError = error
+        }
+    }
+    const statusCode = typeof lastError == 'object' && lastError !== null && 'statusCode' in lastError
+        ? Number((lastError as { statusCode?: unknown }).statusCode)
+        : undefined
+    if (statusCode != 404) console.error(`failed to fetch generation usage for ${id}`, lastError)
+    return fallback
+}
 
 export const tool = (name: string, desc: string, params: string[], func: (args: any) => any) => {
     const parameters = { type: 'object', properties: Object.fromEntries(params.map(p => [p, { type: 'string' }])) }
@@ -32,25 +108,16 @@ const buildMsgs = (args: (string | {msg: string, name: string} | {msg: string, n
 
 export const get = async (...msgs: (string | { msg: string; name: string } | { msg: string; name: string }[])[]): Promise<ChatOut> => {
     const msg = await or.chat.send({ chatRequest: { messages: buildMsgs(msgs), model: 'x-ai/grok-4.20', tools } })
-    const usageFromChat: UsageStats = {
+    const usageObj = typeof msg.usage == 'object' && msg.usage !== null ? msg.usage as Record<string, unknown> : {}
+    let usageFromChat: UsageStats = {
         inputTokens: numberOrZero(msg.usage?.promptTokens),
         outputTokens: numberOrZero(msg.usage?.completionTokens),
         cachedTokens: numberOrZero(msg.usage?.promptTokensDetails?.cachedTokens),
-        cost: 0,
+        cost: numberOrZero(usageObj.cost ?? usageObj.totalCost),
     }
+    usageFromChat.cost ||= await estimateCostFromPricing(msg.model, usageFromChat)
 
-    let usage: UsageStats = usageFromChat
-    try {
-        const generation = await or.generations.getGeneration({ id: msg.id })
-        usage = {
-            inputTokens: generation.data.tokensPrompt ?? usageFromChat.inputTokens,
-            outputTokens: generation.data.tokensCompletion ?? usageFromChat.outputTokens,
-            cachedTokens: generation.data.nativeTokensCached ?? usageFromChat.cachedTokens,
-            cost: generation.data.totalCost ?? generation.data.usage ?? 0,
-        }
-    } catch (error) {
-        console.error(`failed to fetch generation usage for ${msg.id}`, error)
-    }
+    const usage = await readGenerationUsage(msg.id, usageFromChat)
 
     const tool = msg.choices[0].message.toolCalls?.[0]?.function
     if (!tool) return { content: msg.choices[0].message.content, usage }

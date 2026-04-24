@@ -476,62 +476,73 @@ export const Page = () => {
                     </div>
                 </header>
 
-                {!auth.authenticated && <section className='grid gap-4 lg:grid-cols-2'>
+                {!auth.authenticated && <section className='mx-auto max-w-md'>
                     <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
-                        <h2 className='mb-4 text-lg font-semibold'>Login</h2>
-                        <div className='space-y-3'>
-                            <p className='text-xs text-white/70'>
-                                {auth.legacyPasswordConfigured ? `Legacy bootstrap source: ${auth.legacyAuthSource}` : 'No legacy bootstrap password configured.'}
-                            </p>
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                placeholder='discord user id'
-                                value={loginDiscordId}
-                                onChange={(e) => setLoginDiscordId(e.target.value)}
-                                disabled={busy} />
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                type='password'
-                                placeholder='password'
-                                value={loginPassword}
-                                onChange={(e) => setLoginPassword(e.target.value)}
-                                disabled={busy} />
-                            <button className='w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={doLogin} disabled={busy}>
-                                Sign In
-                            </button>
-                            {loginError && <p className='text-sm text-red-300'>{loginError}</p>}
-                        </div>
+                        {authView === 'login' ? (
+                            <>
+                                <h2 className='mb-4 text-lg font-semibold'>Login</h2>
+                                <div className='space-y-3'>
+                                    <p className='text-xs text-white/70'>
+                                        {auth.legacyPasswordConfigured ? `Legacy bootstrap source: ${auth.legacyAuthSource}` : 'No legacy bootstrap password configured.'}
+                                    </p>
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        placeholder='discord user id'
+                                        value={loginDiscordId}
+                                        onChange={(e) => setLoginDiscordId(e.target.value)}
+                                        disabled={busy} />
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        type='password'
+                                        placeholder='password'
+                                        value={loginPassword}
+                                        onChange={(e) => setLoginPassword(e.target.value)}
+                                        disabled={busy} />
+                                    <button className='w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={doLogin} disabled={busy}>
+                                        Sign In
+                                    </button>
+                                    {loginError && <p className='text-sm text-red-300'>{loginError}</p>}
+                                    <p className='text-center text-sm text-white/70'>
+                                        Don't have an account? <button className='text-blue-400 hover:underline' onClick={() => setAuthView('signup')} disabled={busy}>Sign up</button>
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h2 className='mb-4 text-lg font-semibold'>Sign Up</h2>
+                                <div className='space-y-3'>
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        placeholder='discord user id'
+                                        value={signupDiscordId}
+                                        onChange={(e) => setSignupDiscordId(e.target.value)}
+                                        disabled={busy} />
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        placeholder='display name'
+                                        value={signupDisplayName}
+                                        onChange={(e) => setSignupDisplayName(e.target.value)}
+                                        disabled={busy} />
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        type='password'
+                                        placeholder='password'
+                                        value={signupPassword}
+                                        onChange={(e) => setSignupPassword(e.target.value)}
+                                        disabled={busy} />
+                                    <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
+                                        type='password'
+                                        placeholder='confirm password'
+                                        value={signupConfirmPassword}
+                                        onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                                        disabled={busy} />
+                                    <button className='w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={doSignup} disabled={busy}>
+                                        Create Account
+                                    </button>
+                                    {signupError && <p className='text-sm text-red-300'>{signupError}</p>}
+                                    <p className='text-center text-sm text-white/70'>
+                                        Already have an account? <button className='text-blue-400 hover:underline' onClick={() => setAuthView('login')} disabled={busy}>Log in</button>
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </article>
-                    <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
-                        <h2 className='mb-4 text-lg font-semibold'>Sign Up</h2>
-                        <div className='space-y-3'>
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                placeholder='discord user id'
-                                value={signupDiscordId}
-                                onChange={(e) => setSignupDiscordId(e.target.value)}
-                                disabled={busy} />
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                placeholder='display name'
-                                value={signupDisplayName}
-                                onChange={(e) => setSignupDisplayName(e.target.value)}
-                                disabled={busy} />
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                type='password'
-                                placeholder='password'
-                                value={signupPassword}
-                                onChange={(e) => setSignupPassword(e.target.value)}
-                                disabled={busy} />
-                            <input className='w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
-                                type='password'
-                                placeholder='confirm password'
-                                value={signupConfirmPassword}
-                                onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                                disabled={busy} />
-                            <button className='w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={doSignup} disabled={busy}>
-                                Create Account
-                            </button>
-                            {signupError && <p className='text-sm text-red-300'>{signupError}</p>}
-                        </div>
-                    </article>
-                    {error && <section className='rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-200 lg:col-span-2'>{error}</section>}
+                    {error && <section className='mt-4 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-200'>{error}</section>}
                 </section>}
 
                 {auth.authenticated && <>

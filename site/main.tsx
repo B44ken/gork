@@ -226,6 +226,8 @@ Bun.serve({
     const ip = directIp || ipFromReq(req)
 
     if (path == '/dist.js') return new Response(js, { headers: { 'Content-Type': 'text/javascript' } })
+    if (path == '/style.css') return new Response(Bun.file('./site/output.css'))
+    if (path == '/favicon.ico') return new Response(null, { status: 204 })
 
     if (path == '/auth/status') {
       const session = readSession(req)

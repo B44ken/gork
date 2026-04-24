@@ -250,6 +250,10 @@ Bun.serve({
         discordOAuthConfigured: discordOAuth.isDiscordOAuthConfigured(),
         updatedAt: null,
         accountCount: dashboardUsers.listAccounts().length,
+        systemConfigured: {
+          sync: Boolean(process.env.GITHUB_SYNC_TOKEN?.trim()),
+          redeploy: Boolean(process.env.COOLIFY_WEBHOOK?.trim())
+        }
       })
     }
 
@@ -300,6 +304,49 @@ Bun.serve({
       }
     }
 
+    if (path == '/system/sync') {
+      const { session, principal, response } = requireAdmin(req)
+      if (response) return response
+      if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
+      const csrfErr = requireCsrf(req, session!)
+      if (csrfErr) return csrfErr
+
+      const token = process.env.GITHUB_SYNC_TOKEN?.trim()
+      const repo = process.env.GITHUB_REPO?.trim() || 'Champion2005/gork'
+      if (!token) return new Response('GITHUB_SYNC_TOKEN is not configured', { status: 503 })
+
+      const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/sync-upstream.yml/dispatches`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${token}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'Gork-Dashboard'
+        },
+        body: JSON.stringify({ ref: 'main' })
+      })
+
+      if (!res.ok) return new Response(await res.text(), { status: res.status })
+      audit.logAudit({ actor: principal!.displayName, ip, action: 'system.sync' })
+      return Response.json({ ok: true })
+    }
+
+    if (path == '/system/redeploy') {
+      const { session, principal, response } = requireAdmin(req)
+      if (response) return response
+      if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
+      const csrfErr = requireCsrf(req, session!)
+      if (csrfErr) return csrfErr
+
+      const webhook = process.env.COOLIFY_WEBHOOK?.trim()
+      if (!webhook) return new Response('COOLIFY_WEBHOOK is not configured', { status: 503 })
+
+      const res = await fetch(webhook, { method: 'GET' })
+      if (!res.ok) return new Response(await res.text(), { status: res.status })
+      audit.logAudit({ actor: principal!.displayName, ip, action: 'system.redeploy' })
+      return Response.json({ ok: true })
+    }
+
     if (path == '/logout') {
       if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
       const token = parseCookies(req.headers.get('cookie'))[SESSION_COOKIE]
@@ -334,7 +381,7 @@ Bun.serve({
         const account = dashboardUsers.setRole({ discordId, role })
         if (!account) return new Response('Account not found', { status: 404 })
         audit.logAudit({ actor: principal!.displayName, ip, action: 'account.role.update', userId: account.discordId, displayName: account.displayName, details: { role: account.role } })
-        return Response.json({ ok: true, account })
+        return Response.json({ ok: true, account });
       } catch (error) {
         return responseFromError(error)
       }

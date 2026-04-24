@@ -11,6 +11,10 @@ type AuthState = {
     updatedAt: string | null
     accountCount: number
     discordOAuthConfigured: boolean
+    systemConfigured: {
+        sync: boolean
+        redeploy: boolean
+    }
 }
 type UserRow = {
     id: string
@@ -89,6 +93,7 @@ export const Page = () => {
         updatedAt: null,
         accountCount: 0,
         discordOAuthConfigured: false,
+        systemConfigured: { sync: false, redeploy: false },
     })
     const [activeTab, setActiveTab] = useState<Tab>('facts')
     const [busy, setBusy] = useState(false)
@@ -269,6 +274,18 @@ export const Page = () => {
         setMutedInput((updated.mutedUserIds ?? []).join('\n'))
         setDeniedInput((updated.deniedUserIds ?? []).join('\n'))
         await reloadAll()
+    })
+
+    const doSync = () => run(async () => {
+        if (!confirm('This will trigger a GitHub Action to sync from upstream (B44ken/gork). Continue?')) return
+        await postJson('/system/sync', {})
+        alert('Sync triggered successfully! It might take a minute to process.')
+    })
+
+    const doRedeploy = () => run(async () => {
+        if (!confirm('This will trigger a Coolify redeploy. You will be logged out and the dashboard will be unavailable for a minute. Continue?')) return
+        await postJson('/system/redeploy', {})
+        alert('Redeploy triggered! The server will restart shortly.')
     })
 
     const toggleFactSelection = (userId: string, fact: string, checked: boolean) => {
@@ -701,6 +718,36 @@ export const Page = () => {
                             disabled={busy}>
                             Save Config
                         </button>
+
+                        <div className='mt-8 rounded-lg border border-slate-800 bg-slate-950/50 p-4'>
+                            <h3 className='mb-3 text-md font-semibold text-white'>Maintenance</h3>
+                            <p className='mb-4 text-xs text-white/60'>
+                                Manage system-level operations. These buttons require specific environment variables to be configured in Coolify.
+                            </p>
+                            <div className='flex flex-wrap gap-4'>
+                                <div className='flex flex-col gap-2'>
+                                    <button
+                                        className='rounded-md bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50'
+                                        onClick={doSync}
+                                        disabled={busy || !auth.systemConfigured.sync}
+                                    >
+                                        Sync from Upstream
+                                    </button>
+                                    {!auth.systemConfigured.sync && <p className='text-[10px] text-amber-300'>GITHUB_SYNC_TOKEN missing</p>}
+                                </div>
+
+                                <div className='flex flex-col gap-2'>
+                                    <button
+                                        className='rounded-md bg-red-900/30 border border-red-800/50 px-4 py-2 text-sm font-medium text-red-200 hover:bg-red-900/50 disabled:opacity-50'
+                                        onClick={doRedeploy}
+                                        disabled={busy || !auth.systemConfigured.redeploy}
+                                    >
+                                        Redeploy Server
+                                    </button>
+                                    {!auth.systemConfigured.redeploy && <p className='text-[10px] text-amber-300'>COOLIFY_WEBHOOK missing</p>}
+                                </div>
+                            </div>
+                        </div>
                     </section>}
 
                     {activeTab == 'audit' && <section className='overflow-hidden rounded-xl border border-slate-800 bg-slate-900 text-white'>

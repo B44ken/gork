@@ -114,9 +114,13 @@ export const Page = () => {
     const csrfHeaders = () => auth.csrfToken ? { 'x-csrf-token': auth.csrfToken } : {}
 
     const postJson = async (path: string, body: Record<string, unknown>) => {
+        const headers: HeadersInit = { 'Content-Type': 'application/json' }
+        const csrf = auth.csrfToken
+        if (csrf) (headers as Record<string, string>)['x-csrf-token'] = csrf
+
         const res = await fetch(path, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+            headers,
             body: JSON.stringify(body),
         })
         if (!res.ok) throw new Error(await res.text())

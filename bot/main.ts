@@ -1,8 +1,8 @@
-import * as bot from './bot.ts'
-import * as ai from './ai.ts'
-import * as memory from './memory.ts'
-import * as config from './config.ts'
-import * as dashboardUsers from './dashboard-users.ts'
+import * as bot from './bot'
+import * as ai from './ai'
+import * as memory from './memory'
+import * as config from './config'
+import * as dashboardUsers from './dashboard-users'
 import Exa from 'exa-js'
 
 const exa = new Exa(process.env.EXA_API_KEY)
@@ -10,7 +10,8 @@ bot.setHistoryDepthGetter(() => config.loadConfig().historyDepth)
 
 ai.tool('web-search', 'search a question via exa', ['query'], async ({ query }) => {
     if (!config.loadConfig().webSearchEnabled) return 'web search is disabled by admin'
-    return await exa.search(query, { contents: { highlights: { maxCharacters: 2500 } } }).results
+    const res = await exa.search(query, { contents: { highlights: { maxCharacters: 2500 } } })
+    return res.results
 })
 
 ai.tool('add-fun-fact', 'adds to memory', ['user', 'fact'], ({ user, fact }) =>

@@ -355,7 +355,7 @@ Bun.serve({
     }
 
     if (path == '/config') {
-      const { session, response } = requireAdmin(req)
+      const { session, principal, response } = requireAdmin(req)
       if (response) return response
       if (req.method == 'GET') return Response.json(config.loadConfig())
       if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })

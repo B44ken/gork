@@ -102,11 +102,31 @@ export const tool = (name: string, desc: string, params: string[], func: (args: 
     handlers[name] = func
 }
 
-const buildMsgs = (args: ChatInput[]): { role: 'system' | 'user' | 'assistant', content: string }[] => [
-    {role: 'system', content: args[0] as string }, 
-    {role: 'user', content: args.flat().filter(a => typeof a != 'string').map(a => `${a.name}: ${a.msg}`).join('\n')},
-    ...args.slice(1).filter(a => typeof a == 'string').map(a => ({role: 'assistant', content: a} as const))
-]
+const buildMsgs = (args: ChatInput[]): { role: 'system' | 'user' | 'assistant' | 'tool', content: string, name?: string }[] => {
+    const sys = args[0] as string
+    const lines = args.flat().filter(a => typeof a != 'string') as ChatLine[]
+    const assistantMsgs = args.slice(1).filter(a => typeof a == 'string') as string[]
+
+    const messages: any[] = [
+        { role: 'system', content: sys }
+    ]
+
+    // Add history + current message in a structured way
+    lines.forEach((line, idx) => {
+        const isLast = idx === lines.length - 1
+        messages.push({
+            role: 'user',
+            name: line.name.replace(/[^a-zA-Z0-9_-]/g, '_'), // Tool names/names must match pattern
+            content: isLast ? `[CURRENT MESSAGE from ${line.name} (ID: ${line.id})]: ${line.msg}` : `${line.name}: ${line.msg}`
+        })
+    })
+
+    assistantMsgs.forEach(msg => {
+        messages.push({ role: 'assistant', content: msg })
+    })
+
+    return messages
+}
 
 export const getWithOptions = async (options: { model?: string }, ...msgs: ChatInput[]): Promise<ChatOut> => {
     const model = options.model?.trim() || 'x-ai/grok-4.20'

@@ -2,6 +2,7 @@ import * as bot from './bot'
 import * as ai from './ai'
 import * as memory from './memory'
 import * as config from './config'
+import * as audit from './audit'
 import * as dashboardUsers from './dashboard-users'
 import { migrateFromLegacy } from './storage'
 import Exa from 'exa-js'
@@ -19,8 +20,18 @@ ai.tool('web-search', 'search a question via exa', ['query'], async ({ query }) 
     return res.results
 })
 
-ai.tool('add-fun-fact', 'adds to memory', ['user', 'fact'], ({ user, fact }) =>
-    memory.addFact({ user, fact, displayName: user }))
+ai.tool('add-fun-fact', 'Adds a permanent personal fact about a user to your memory. ONLY extract facts explicitly stated by the user in the CURRENT conversation. DO NOT add temporary info, generic greetings, or meta-commentary. Keep facts concise and high-value.', ['user', 'fact'], ({ user, fact }) => {
+    const out = memory.addFact({ user, fact, displayName: user })
+    audit.logAudit({
+        actor: 'gork-bot',
+        ip: '127.0.0.1',
+        action: 'fact.add',
+        userId: out.userId,
+        displayName: out.displayName,
+        after: fact
+    })
+    return `Added fact for ${out.displayName}`
+})
 
 bot.message(async chat => {
     const cfg = config.loadConfig()
@@ -32,7 +43,19 @@ bot.message(async chat => {
         dashboardUsers.upsertSeenIdentity({ discordId: participant.id, displayName: participant.name })
     }
 
-    let sys = 'you are gork jr, a helpful, somewhat brainrotted, assistant. if someone asks a stupid question, respond with: https://tenor.com/view/twitter-x-gork-grok-contacting-gork-gif-8134004189220612680'
+    let sys = `You are Gork Jr, a highly advanced, helpful, and somewhat "brainrotted" Discord assistant. 
+You are witty, sarcastic, and deeply embedded in internet culture.
+
+CRITICAL INSTRUCTIONS:
+- IDENTIFICATION: You are talking to multiple users. Always check the "[CURRENT MESSAGE from ...]" tag to see who is speaking. NEVER mistake the current speaker for someone mentioned in history.
+- FACT EXTRACTION: When using 'add-fun-fact', ONLY capture facts about the CURRENT user who just spoke, unless they explicitly state a fact about someone else.
+- ACCURACY: If you aren't sure who said what, ask for clarification.
+- RULES:
+    - If someone asks a stupid or obvious question, respond with: https://tenor.com/view/twitter-x-gork-grok-contacting-gork-gif-8134004189220612680
+    - Use your tools (web-search, add-fun-fact) when they add value.
+    - Keep facts permanent and high-value. No temporary states (e.g., "is tired").
+    - Keep replies punchy and engaging.`
+
     if (cfg.degeneracyMode && chat.channel == 'degeneracy') sys = sys.replace('helpful', 'extremely degenerate and horny')
     if (cfg.generalBrief && chat.channel == 'general') sys += ' your messages must be brief.'
 

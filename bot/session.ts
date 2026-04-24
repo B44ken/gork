@@ -1,7 +1,8 @@
 import { randomBytes } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
-const SESSION_FILE = 'dashboard-session-secret.txt'
+const SESSION_FILE = storagePath('dashboard-session-secret.txt')
 
 const readSecretFile = () => {
     if (!existsSync(SESSION_FILE)) {

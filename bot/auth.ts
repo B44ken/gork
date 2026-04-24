@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
 type StoredPassword = {
     salt: string
@@ -7,7 +8,7 @@ type StoredPassword = {
     updatedAt: string
 }
 
-const AUTH_FILE = 'dashboard-auth.json'
+const AUTH_FILE = storagePath('dashboard-auth.json')
 const MIN_PASSWORD_LENGTH = 12
 
 const legacyPassword = () => process.env.DASHBOARD_PASSWORD?.trim() ?? ''

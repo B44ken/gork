@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
 export type DashboardRole = 'admin' | 'user'
 type StoredAccount = {
@@ -15,7 +16,7 @@ type StoredAccount = {
 
 export type DashboardAccount = Omit<StoredAccount, 'passwordSalt' | 'passwordHash'>
 
-const USERS_FILE = 'dashboard-users.json'
+const USERS_FILE = storagePath('dashboard-users.json')
 const MIN_PASSWORD_LENGTH = 12
 
 const ensureFile = () => {

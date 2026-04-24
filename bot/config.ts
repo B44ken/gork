@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
 export type BotConfig = {
     model: string
@@ -12,7 +13,7 @@ export type BotConfig = {
     deniedUserIds: string[]
 }
 
-const CONFIG_FILE = 'bot-config.json'
+const CONFIG_FILE = storagePath('bot-config.json')
 const defaults: BotConfig = {
     model: 'x-ai/grok-4.20',
     historyDepth: 12,

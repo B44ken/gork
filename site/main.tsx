@@ -416,6 +416,28 @@ Bun.serve({
       }
     }
 
+    if (path == '/accounts/reset-password') {
+      if (req.method != 'POST') return new Response('Method not allowed', { status: 405 })
+      if (!hitGuardedRateLimit('write', ip, 120, 60 * 1000)) return new Response('Too many requests', { status: 429 })
+      const { session, principal, response } = requireAdmin(req)
+      if (response) return response
+      const csrfErr = requireCsrf(req, session!)
+      if (csrfErr) return csrfErr
+      const body = await parseJsonBody(req)
+      if (!body) return new Response('Invalid JSON payload', { status: 400 })
+      const discordId = getString(body, 'discordId')
+      const newPassword = getString(body, 'newPassword')
+      try {
+        if (!discordId) return new Response('"discordId" is required', { status: 400 })
+        if (!newPassword) return new Response('"newPassword" is required', { status: 400 })
+        const account = dashboardUsers.resetPassword({ discordId, newPassword })
+        audit.logAudit({ actor: principal!.displayName, ip, action: 'account.password.reset', userId: account.discordId, displayName: account.displayName })
+        return Response.json({ ok: true, account })
+      } catch (error) {
+        return responseFromError(error)
+      }
+    }
+
     if (path == '/load') {
       const { response } = requireAuth(req)
       if (response) return response

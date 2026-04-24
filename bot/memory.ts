@@ -1,4 +1,5 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
 export type UserIdentity = { id: string; name: string }
 export type UserMemory = {
@@ -19,8 +20,8 @@ export type Memory = Record<string, UserMemory>
 type UsageSample = { userId: string; displayName: string; inputTokens: number; outputTokens: number; cachedTokens: number; cost: number }
 type UsageEvent = UsageSample & { at: string }
 
-const DB_FILE = 'db.json'
-const USAGE_FILE = 'usage-events.jsonl'
+const DB_FILE = storagePath('db.json')
+const USAGE_FILE = storagePath('usage-events.jsonl')
 
 if (!existsSync(DB_FILE)) writeFileSync(DB_FILE, '{}')
 if (!existsSync(USAGE_FILE)) writeFileSync(USAGE_FILE, '')

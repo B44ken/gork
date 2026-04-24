@@ -129,6 +129,8 @@ export const Page = () => {
     const [createAccountDisplayName, setCreateAccountDisplayName] = useState('')
     const [createAccountPassword, setCreateAccountPassword] = useState('')
     const [createAccountRole, setCreateAccountRole] = useState<'admin' | 'user'>('user')
+    const [resetAccountDiscordId, setResetAccountDiscordId] = useState('')
+    const [resetAccountPassword, setResetAccountPassword] = useState('')
 
     const csrfHeaders = () => auth.csrfToken ? { 'x-csrf-token': auth.csrfToken } : {}
 
@@ -257,6 +259,8 @@ export const Page = () => {
         setCreateAccountDisplayName('')
         setCreateAccountPassword('')
         setCreateAccountRole('user')
+        setResetAccountDiscordId('')
+        setResetAccountPassword('')
         await refreshAuth()
     })
 
@@ -342,6 +346,17 @@ export const Page = () => {
         setCreateAccountDisplayName('')
         setCreateAccountPassword('')
         setCreateAccountRole('user')
+        await reloadAll()
+    })
+
+    const resetDashboardAccountPassword = () => run(async () => {
+        const discordId = resetAccountDiscordId.trim()
+        const newPassword = resetAccountPassword
+        if (!discordId) throw new Error('Discord ID is required')
+        if (!newPassword.trim()) throw new Error('New password is required')
+        await postJson('/accounts/reset-password', { discordId, newPassword })
+        setResetAccountDiscordId('')
+        setResetAccountPassword('')
         await reloadAll()
     })
 
@@ -709,6 +724,30 @@ export const Page = () => {
                             </div>
                             <button className='mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={createDashboardAccount} disabled={busy}>
                                 Create Account
+                            </button>
+                        </article>
+
+                        <article className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
+                            <h2 className='mb-4 text-lg font-semibold'>Reset Account Password</h2>
+                            <div className='grid gap-3 md:grid-cols-3'>
+                                <input
+                                    className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm'
+                                    placeholder='discord user id'
+                                    value={resetAccountDiscordId}
+                                    onChange={(e) => setResetAccountDiscordId(e.target.value)}
+                                    disabled={busy}
+                                />
+                                <input
+                                    className='rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm md:col-span-2'
+                                    placeholder='new password'
+                                    type='password'
+                                    value={resetAccountPassword}
+                                    onChange={(e) => setResetAccountPassword(e.target.value)}
+                                    disabled={busy}
+                                />
+                            </div>
+                            <button className='mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60' onClick={resetDashboardAccountPassword} disabled={busy}>
+                                Reset Password
                             </button>
                         </article>
 

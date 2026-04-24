@@ -1,4 +1,5 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'fs'
+import { storagePath } from './storage'
 
 export type AuditEvent = {
     id: string
@@ -13,7 +14,7 @@ export type AuditEvent = {
     details?: Record<string, unknown>
 }
 
-const AUDIT_FILE = 'audit-log.jsonl'
+const AUDIT_FILE = storagePath('audit-log.jsonl')
 
 const ensureAuditFile = () => {
     if (!existsSync(AUDIT_FILE)) writeFileSync(AUDIT_FILE, '')

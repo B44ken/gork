@@ -10,6 +10,7 @@ package-lock.json
 bot-config.json
 audit-log.jsonl
 usage-events.jsonl
+db.json
 dashboard-auth.json
 dashboard-users.json
 dashboard-session-secret.txt

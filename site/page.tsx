@@ -287,7 +287,7 @@ export const Page = () => {
                                 </thead>
                                 <tbody>
                                     {sortedUsageRows.map((row) => (
-                                        <tr className='border-b border-slate-800/70 hover:bg-slate-950/40' key={row.user}>
+                                        <tr className='border-b border-slate-800/70 hover:bg-slate-950/40 text-white ' key={row.user}>
                                             <td className='px-4 py-3 font-medium'>{row.user}</td>
                                             <td className='px-4 py-3'>{numberFmt.format(row.mentions)}</td>
                                             <td className='px-4 py-3'>{numberFmt.format(row.total_tokens_in)}</td>

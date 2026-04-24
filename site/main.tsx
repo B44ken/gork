@@ -7,6 +7,11 @@ import * as audit from '../bot/audit'
 import * as dashboardUsers from '../bot/dashboard-users'
 import * as discordOAuth from '../bot/discord-oauth'
 import { getSessionSecret } from '../bot/session'
+import { migrateFromLegacy } from '../bot/storage'
+
+// Migrate files to persistent storage if needed
+['db.json', 'usage-events.jsonl', 'audit-log.jsonl', 'bot-config.json', 'dashboard-users.json', 'dashboard-session-secret.txt']
+    .forEach(migrateFromLegacy)
 
 const { outputs } = await Bun.build({ entrypoints: ['./site/page.tsx'], target: 'browser' })
 const js = await outputs[0].text()
@@ -509,6 +514,10 @@ Bun.serve({
         audit.logAudit({ actor: principal!.displayName, ip, action: 'fact.delete-profile', userId: targetUserId, displayName: targetDisplayName })
         return Response.json({ ok: success })
       }
+    }
+
+    if (path.startsWith('/auth/') || path.startsWith('/system/') || path.startsWith('/facts/') || ['/load', '/analytics', '/audit', '/config', '/accounts'].includes(path)) {
+      return new Response('API route not found', { status: 404, headers: { 'Content-Type': 'application/json' } })
     }
 
     return renderToReadableStream(<Page />, { bootstrapModules: ['/dist.js'] }).then((s) => new Response(s))

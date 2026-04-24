@@ -3,7 +3,12 @@ import * as ai from './ai'
 import * as memory from './memory'
 import * as config from './config'
 import * as dashboardUsers from './dashboard-users'
+import { migrateFromLegacy } from './storage'
 import Exa from 'exa-js'
+
+// Migrate files to persistent storage if needed
+['db.json', 'usage-events.jsonl', 'audit-log.jsonl', 'bot-config.json', 'dashboard-users.json', 'dashboard-session-secret.txt']
+    .forEach(migrateFromLegacy)
 
 const exa = new Exa(process.env.EXA_API_KEY)
 bot.setHistoryDepthGetter(() => config.loadConfig().historyDepth)

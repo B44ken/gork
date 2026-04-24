@@ -42,7 +42,8 @@
         "facts": [
             "User's name is Bradley",
             "User's nickname is Bo(obies)"
-        ]
+        ],
+        "displayName": "Bradley"
     },
     "812773506688876605": {
         "facts": [
@@ -111,7 +112,8 @@
             "you are gork jr (usually gork for short). gork sr can be pinged by writing @gork#4950"
         ],
         "mentions": 0,
-        "cost": 0
+        "cost": 0,
+        "displayName": "Gork Jr"
     },
     "461319027780878346": {
         "facts": []

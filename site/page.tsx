@@ -366,15 +366,15 @@ export const Page = () => {
             <meta charSet='utf-8' />
             <meta name='viewport' content='width=device-width, initial-scale=1' />
             <link href='/style.css' rel='stylesheet' />
-            <title>gork dashboard</title>
+            <title>dashgork</title>
         </head>
         <main className='min-h-screen bg-slate-950 text-white'>
             <div className='mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6'>
                 <header className='rounded-xl border border-slate-800 bg-slate-900 p-5 text-white'>
                     <div className='flex flex-wrap items-start justify-between gap-4'>
                         <div>
-                            <h1 className='text-2xl font-semibold'>Gork Admin Dashboard</h1>
-                            <p className='mt-2 text-sm text-white/80'>Facts, usage analytics, config, and security controls.</p>
+                            <h1 className='text-2xl font-bold tracking-tight'>dashgork</h1>
+                            <p className='mt-1 text-sm text-white/60'>Facts, usage analytics, config, and security controls.</p>
                             {auth.authenticated && <p className='mt-2 text-xs text-white/70'>
                                 Signed in as <span className='font-medium text-white'>{auth.displayName ?? auth.discordId}</span>
                                 {' '}· <span className='font-medium text-white'>{auth.role}</span>

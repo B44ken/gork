@@ -7,6 +7,7 @@ const js = await outputs[0].text()
 console.log('server at :6767')
 Bun.serve({
   port: 6767,
+  hostname: '0.0.0.0',
   fetch: async ({json, url}) => {
     const path  = new URL(url).pathname
 

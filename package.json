@@ -2,22 +2,27 @@
   "name": "gork",
   "version": "1.0.0",
   "scripts": {
+    "prestart": "npm run build",
     "start": "npm run site & npm run bot & wait",
     "site": "bun --jsx site/main.tsx",
     "bot": "bun --no-deprecation bot/main.ts",
-    "bot-node": "tsx --no-deprecation bot/main.ts"
+    "bot-node": "tsx --no-deprecation bot/main.ts",
+    "build": "npx tailwindcss -i site/input.css -o site/output.css --minify"
   },
   "dependencies": {
     "@openrouter/sdk": "latest",
     "b44ui": "latest",
+    "bun": "^1.3.13",
     "discord.js": "latest",
     "dotenv": "latest",
     "exa-js": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "tailwindcss": "^3.4.1"
   },
   "devDependencies": {
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "typescript": "^6.0.3"
   }
 }

@@ -52,7 +52,9 @@ export const ready = () => {
     })
 
     client.on('messageCreate', async msg => {
-        if (!msg.mentions.members?.has(client.user!.id) || msg.author.id == client.user!.id) return
+        if (msg.author.bot || msg.author.id == client.user!.id) return
+        if (!msg.mentions.members?.has(client.user!.id)) return
+        
         msg.channel.sendTyping()
         const chat = await buildChats(msg, historyDepthGetter())
         if (msgHandler) {

@@ -95,7 +95,20 @@ export const ready = () => {
     })
 
     client.on('messageCreate', async msg => {
-        if (!msg.mentions.members?.has(client.user!.id) || msg.author.id === client.user!.id) return
+        if (msg.author.id === client.user!.id) return
+        const mentioned = msg.mentions.members?.has(client.user!.id)
+        const isBot = msg.author.bot
+
+        if (!mentioned && !isBot) return
+
+        if (!mentioned && isBot) {
+            const C = historyDepthGetter()
+            const history = await msg.channel.messages.fetch({ limit: C + 1 })
+            const N = [...history.values()].filter(m => m.author.bot && m.author.id !== client.user!.id).length
+            const chance = 1 - Math.pow(N - 1, 2) / C
+            if (Math.random() >= chance) return
+        }
+
         msg.channel.sendTyping()
         const chat = await buildChats(msg, historyDepthGetter())
         if (msgHandler) {

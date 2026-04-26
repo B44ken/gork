@@ -1,6 +1,5 @@
 import 'dotenv/config'
 import { Client, GatewayIntentBits, REST, Routes, TextChannel, type ChatInputCommandInteraction, type Message } from 'discord.js'
-import { config } from '../db.json'
 
 type ArgType = 'string' | 'integer' | 'user'
 export const string: ArgType = 'string', integer: ArgType = 'integer', user: ArgType = 'user'
@@ -8,17 +7,19 @@ type ArgDef = ArgType | { type: ArgType, choices?: (string | number)[] }
 const arg = (def: ArgDef) => typeof def === 'string' ? { type: def } : def
 export const oneOf = (type: ArgType, choices: (string | number)[]): ArgDef => ({ type, choices })
 type Chats = {
-    history: { name: string; msg: string }[], next: { name: string; msg: string },
+    history: { id: string; name: string; msg: string }[], next: { id: string; name: string; msg: string },
     channel: string, message?: Message, interaction?: ChatInputCommandInteraction
 }
-type Handler = (chat: Chats, args: Record<string, unknown>) => void | Promise<string>
+type Handler = (chat: Chats, args: Record<string, unknown>) => void | Promise<string | undefined>
 
 type Command = { name: string, args: Record<string, ArgDef>, handler: Handler }
 const cmds: Command[] = []
 export const command = (name: string, args: Record<string, ArgDef>, handler: Handler) => void cmds.push({ name, args, handler })
 
-let handler: Handler | undefined
-export const message = (h: Handler) => handler = h
+let msgHandler: Handler | undefined
+export const message = (h: Handler) => msgHandler = h
+let historyDepthGetter = () => 12
+export const setHistoryDepthGetter = (getter: () => number) => { historyDepthGetter = getter }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] })
 
@@ -53,11 +54,11 @@ const buildDiscordCommands = () => {
     return [...roots.values()]
 }
 
-const buildChats = async (msg: Message, limit = 12): Promise<Chats> => {
-    const history = await msg.channel.messages.fetch({ limit })
-        .then(msgs => [...msgs.values()].map(m => ({ name: m.author.username, msg: m.content })))
+const buildChats = async (msg: Message, n = 12): Promise<Chats> => {
+    const history = await msg.channel.messages.fetch({ limit: 20 })
+        .then((msgs: Map<any, Message>) => [...msgs.values()].reverse().slice(-n).map(m => ({ id: m.author.id, name: m.author.username, msg: m.content })))
     history.pop()
-    return { history, next: { name: msg.author.username, msg: msg.content }, channel: (msg.channel as TextChannel).name, message: msg }
+    return { history, next: { id: msg.author.id, name: msg.author.username, msg: msg.content }, channel: (msg.channel as TextChannel).name, message: msg }
 }
 
 export const ready = () => {
@@ -84,7 +85,7 @@ export const ready = () => {
 
         const chat: Chats = {
             history: [],
-            next: { name: int.user.username, msg: '' },
+            next: { id: int.user.id, name: int.user.username, msg: '' },
             channel: (int.channel as TextChannel)?.name ?? '',
             interaction: int,
         }
@@ -94,23 +95,17 @@ export const ready = () => {
     })
 
     client.on('messageCreate', async msg => {
-        if (msg.author.id === client.user!.id) return
-        const chat = await buildChats(msg, config.context)
-
-        const mentioned = msg.mentions.members?.has(client.user!.id)
-        const prevI = chat.history.toReversed().findIndex(h => h.name.startsWith('gork'))
-
-        const lobotomy = chat.history.findIndex(h => h.msg.includes('the operation was a success'))
-        chat.history = chat.history.slice(0, lobotomy !== -1 ? lobotomy : undefined)
-
-        const shouldReply = mentioned || ((prevI === -1 || prevI > config.waffle.after_msgs) && Math.random() < config.waffle.chance)
-
-        if (!handler || !shouldReply) return
+        if (!msg.mentions.members?.has(client.user!.id) || msg.author.id === client.user!.id) return
         msg.channel.sendTyping()
-        await msg.reply(await handler(chat, {})!)
+        const chat = await buildChats(msg, historyDepthGetter())
+        if (msgHandler) {
+            const reply = await msgHandler(chat, {})
+            if (reply && reply.trim()) await msg.reply(reply)
+        }
     })
 
     const token = process.env.DISCORD_TOKEN
     if (!token) throw new Error('DISCORD_TOKEN is not set')
     client.login(token)
 }
+

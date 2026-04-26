@@ -1,4 +1,5 @@
 import { OpenRouter } from '@openrouter/sdk'
+import { config } from '../db.json'
 
 const or = new OpenRouter({ apiKey: process.env.OPENROUTER_KEY! }), tools: any[] = [], handlers: { [key: string]: (args: any) => any } = {}
 
@@ -15,9 +16,9 @@ const buildMsgs = (args: (string | {msg: string, name: string} | {msg: string, n
 ]
 
 export const get = async (...msgs: (string | { msg: string; name: string } | { msg: string; name: string }[])[]): Promise<string> => {
-    const msg = await or.chat.send({ chatRequest: { messages: buildMsgs(msgs), model: 'x-ai/grok-4.20', tools } })
+    const msg = await or.chat.send({ chatRequest: { messages: buildMsgs(msgs), model: 'x-ai/grok-4.20', tools, reasoning: { effort: config.thinking as 'none' | 'low' } } })
     const tool = msg.choices[0].message.toolCalls?.[0]?.function
-    if (!tool) return msg.choices[0].message.content
+    if (!tool) return msg.choices[0].message.content.replace('<|eos|>', '').trim()
     const args = JSON.parse(tool.arguments)
     const out = await handlers[tool.name](args)
     msgs.push(`successfully called ${tool.name} ${JSON.stringify(args)}:\n${out}`)

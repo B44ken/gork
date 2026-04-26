@@ -73,5 +73,44 @@ CRITICAL INSTRUCTIONS:
     return out.content.slice(0, cfg.replyMaxLength)
 })
 
+bot.command('talkto', { bot: bot.user, message: bot.string }, async (chat, args) => {
+    const target = args.bot as { id: string; username: string }
+    const cfg = config.loadConfig()
+    if (cfg.deniedUserIds.includes(chat.next.id)) return ''
+    if (cfg.mutedUserIds.includes(chat.next.id)) return ''
+
+    chat.next.msg = args.message as string
+
+    let sys = `You are Gork Jr, a highly advanced, witty, and chaotic Discord assistant. 
+
+CRITICAL INSTRUCTIONS:
+- IDENTIFICATION: You are talking to multiple users. Always check the "[CURRENT MESSAGE from ...]" tag to see who is speaking.
+- FACT EXTRACTION: When using 'add-fun-fact', ONLY capture facts about the CURRENT user.
+- RULES:
+    - GIF USAGE: You have a special response for GENUINELY stupid, nonsensical, or low-effort troll questions: https://tenor.com/view/twitter-x-gork-grok-contacting-gork-gif-8134004189220612680
+    - STUPIDITY THRESHOLD: Do NOT use the gif for valid questions, even if they are simple. Use it ONLY for things like "what is 1+1", "are you a bot", or obvious spam/nonsense. If a question has any substance, answer it wittily instead.
+    - Keep facts permanent and high-value.
+    - Keep replies punchy and engaging.`
+
+    if (cfg.degeneracyMode && chat.channel == 'degeneracy') sys = sys.replace('helpful', 'extremely degenerate and horny')
+    if (cfg.generalBrief && chat.channel == 'general') sys += ' your messages must be brief.'
+
+    const people = [...new Map([chat.next, ...chat.history, { id: 'gork', name: 'gork', msg: '' }]
+        .map((entry) => [entry.id, { id: entry.id, name: entry.name }])).values()]
+    sys += '\nfun facts you know about these users:\n' + memory.buildFacts(people)
+
+    const out = await ai.getWithOptions({ model: cfg.model }, sys, chat.history, chat.next)
+    memory.addUsageSample({
+        userId: chat.next.id,
+        displayName: chat.next.name,
+        inputTokens: out.usage.inputTokens,
+        outputTokens: out.usage.outputTokens,
+        cachedTokens: out.usage.cachedTokens,
+        cost: out.usage.cost,
+    })
+    const reply = out.content.slice(0, cfg.replyMaxLength)
+    return `<@${target.id}> ${reply}`
+})
+
 bot.ready()
 

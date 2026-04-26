@@ -116,30 +116,37 @@ export const upsertUserIdentity = ({ userId, displayName }: { userId: string; di
 
 export const addFact = ({ user, fact, userId, displayName }: { user: string; fact: string; userId?: string; displayName?: string }) => {
     const mem = load()
-    const key = resolveUserKey(mem, user.trim(), userId?.trim(), displayName?.trim())
-    const row = ensureUser(mem, key, displayName ?? user, userId)
-    row.facts = [...new Set([...row.facts, fact.trim()].filter(Boolean))]
+    const safeUser = user?.trim() || 'unknown'
+    const key = resolveUserKey(mem, safeUser, userId?.trim(), displayName?.trim())
+    const row = ensureUser(mem, key, displayName ?? safeUser, userId)
+    if (fact && fact.trim()) {
+        row.facts = [...new Set([...row.facts, fact.trim()].filter(Boolean))]
+    }
     save(mem)
     return { userId: key, displayName: row.displayName ?? key }
 }
 
 export const deleteFact = ({ user, fact, userId }: { user: string; fact: string; userId?: string }) => {
     const mem = load()
-    const key = resolveUserKey(mem, user.trim(), userId?.trim())
+    const safeUser = user?.trim() || 'unknown'
+    const key = resolveUserKey(mem, safeUser, userId?.trim())
     if (!mem[key]) return false
     const row = ensureUser(mem, key)
-    row.facts = row.facts.filter((entry) => entry != fact)
+    if (fact) {
+        row.facts = row.facts.filter((entry) => entry != fact && entry != fact.trim())
+    }
     save(mem)
     return true
 }
 
 export const editFact = ({ user, oldFact, newFact, userId }: { user: string; oldFact: string; newFact: string; userId?: string }) => {
     const mem = load()
-    const key = resolveUserKey(mem, user.trim(), userId?.trim())
+    const safeUser = user?.trim() || 'unknown'
+    const key = resolveUserKey(mem, safeUser, userId?.trim())
     if (!mem[key]) return false
     const row = ensureUser(mem, key)
     const index = row.facts.indexOf(oldFact)
-    if (index == -1) return false
+    if (index == -1 || !newFact || !newFact.trim()) return false
     row.facts[index] = newFact.trim()
     row.facts = [...new Set(row.facts.filter(Boolean))]
     save(mem)

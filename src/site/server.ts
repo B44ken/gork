@@ -52,31 +52,6 @@ export default async (request: Request, state: any, kernel: typeof Kernel) => {
     if (!name) return new Response(Object.keys(state.instances).map(n => `<p><a href="/${n}/">${n}</a>`).join('') || 'no instances',
         { headers: { 'content-type': 'text/html; charset=utf-8' } })
     if (!instance) return new Response('not found', { status: 404 })
-    if (file === 'raw-log.json') {
-        // Temporary: log every gateway packet that isn't tied to a guild.
-        const client = instance.client
-        if (!instance.rawLog) {
-            instance.rawLog = (p: any) => { if (p.t && !p.d?.guild_id) console.log(`raw ${p.t} channel=${p.d?.channel_id ?? p.d?.id} type=${p.d?.type} channel_type=${p.d?.channel_type} author=${p.d?.author?.username}`) }
-            client.on('raw', instance.rawLog)
-        }
-        return Response.json({ logging: true, rawListeners: client.listenerCount('raw') })
-    }
-    if (file === 'dm-probe.json') {
-        // Temporary: replay a DM packet authored by the bot itself (the hook ignores own messages).
-        const client = instance.client
-        const id = String((BigInt(Date.now() - 1420070400000) << 22n))
-        let emitted = false
-        const listener = (m: any) => { if (m.id === id) emitted = true }
-        client.on('messageCreate', listener)
-        let error: string | null = null
-        try {
-            client.actions.MessageCreate.handle({ id, channel_id: '1575671201362223155', type: 0, content: 'probe', timestamp: new Date().toISOString(),
-                author: { id: client.user.id, username: client.user.username, discriminator: '0', avatar: null }, attachments: [], embeds: [], mentions: [], mention_roles: [], pinned: false, tts: false, mention_everyone: false })
-        } catch (e) { error = e instanceof Error ? e.stack ?? e.message : String(e) }
-        await new Promise(resolve => setTimeout(resolve, 200))
-        client.off('messageCreate', listener)
-        return Response.json({ emitted, error, dmCached: client.channels.cache.filter((c: any) => c.isDMBased()).map((c: any) => c.id) })
-    }
     if (file === 'debug.json') {
         const client = instance.client
         return Response.json({ intents: client.options.intents.bitfield, partials: client.options.partials, listeners: client.listenerCount('messageCreate'),

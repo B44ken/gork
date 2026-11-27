@@ -76,3 +76,17 @@ test('trace shows events, thinking, commands and output', () => {
         { kind: 'command', text: 'reply.sh hi' }, { kind: 'output', text: 'sent message 1' },
     ])
 })
+
+test('uncached DM channels are fetched and the message replayed once', async () => {
+    const { default: raw } = await import('../src/hooks/raw.ts')
+    const cache = new Set<string>(), handled: string[] = []
+    const client = {
+        channels: { cache: { has: (id: string) => cache.has(id) }, fetch: async (id: string) => { cache.add(id) } },
+        actions: { MessageCreate: { handle: (d: any) => handled.push(d.id) } },
+    }
+    const dm = (id: string) => ({ t: 'MESSAGE_CREATE', d: { id, channel_id: '9' } })
+    await raw(dm('1'), { client })
+    await raw(dm('2'), { client })
+    await raw({ t: 'MESSAGE_CREATE', d: { id: '3', channel_id: '8', guild_id: '7' } }, { client })
+    expect(handled).toEqual(['1'])
+})

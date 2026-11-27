@@ -44,6 +44,12 @@ export default async (state: any, kernel: K) => {
             instance.client = client
             await client.login(instance.env.DISCORD_TOKEN)
         }
+        // Attached outside the block above so an already-running client gets it on deploy.
+        if (!instance.rawHook) {
+            instance.rawHook = (packet: unknown) => kernel.load('hooks/raw.ts')
+                .then(hook => hook(packet, instance)).catch(error => kernel.report(error, 'hooks/raw.ts'))
+            instance.client.on('raw', instance.rawHook)
+        }
 
         // A thread built from older code is swapped out between turns; the session itself is resumed.
         if (instance.threadVersion !== state.version && !instance.thread?.busy) {

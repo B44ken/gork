@@ -15,6 +15,7 @@
     "exa-js": "latest",
     "file-type": "^22.3.0",
     "just-bash": "^3.6.1",
+    "sharp": "^0.35.5",
     "zod": "^4"
   },
   "devDependencies": {

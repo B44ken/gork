@@ -27,17 +27,34 @@ export default (instance: any, kernel: typeof Kernel) => {
         close() { closed = true; wake() },
     }
 
+    // Live Discord status: "thinking for <name> | N tool calls", throttled (presence updates are rate limited).
+    let calls = 0, last = 0, timer: any
+    const status = (text?: string) => {
+        const apply = () => {
+            last = Date.now(); timer = undefined
+            try {
+                instance.client?.user?.setPresence(text
+                    ? { activities: [{ name: 'status', type: 4, state: text }], status: 'online' }
+                    : { activities: [], status: 'online' })
+            } catch {}
+        }
+        clearTimeout(timer)
+        const wait = 5000 - (Date.now() - last)
+        if (wait <= 0 || !text) apply(); else timer = setTimeout(apply, wait)
+    }
+    const busyText = () => `thinking for ${instance.currentName ?? 'someone'} | ${calls} tool call${calls === 1 ? '' : 's'}`
+
     async function* input() {
         while (!closed) {
             const next = queue.shift()
-            if (next) { thread.busy = true; yield next }
+            if (next) { thread.busy = true; calls = 0; status(busyText()); yield next }
             else await new Promise<void>(resolve => wake = resolve)
         }
     }
 
     const bash = tool('bash', 'Run a bash command in your workspace (a virtual shell: /memory, /bin, /chat, /src, /tmp). Returns stdout, stderr and the exit code.',
         { command: z.string() },
-        async ({ command }) => (await kernel.load('shell.ts'))(command, instance, kernel))
+        async ({ command }) => { calls++; status(busyText()); return (await kernel.load('shell.ts'))(command, instance, kernel) })
 
     const run = async () => {
         for await (const message of query({
@@ -68,6 +85,7 @@ export default (instance: any, kernel: typeof Kernel) => {
             }
             if (message.type === 'result') {
                 thread.busy = queue.length > 0
+                if (!thread.busy) status()
                 if (message.subtype !== 'success') kernel.report(new Error(`turn ended: ${message.subtype}`), 'thread.ts')
                 // A deploy during this turn left this thread stale; swap it now that it is idle.
                 if (instance.threadVersion !== kernel.state.version) kernel.reconcile()

@@ -56,6 +56,7 @@ export default async (message: Message, instance: any, kernel: typeof Kernel) =>
     ].filter(Boolean).join('\n')
 
     // ponytail: the shell env reflects the latest event, so a turn batching several events sees the newest one.
+    instance.currentName = author
     instance.current = { CHANNEL: message.channelId, MESSAGE: message.id, AUTHOR: message.author.id, ...(message.guildId && { GUILD: message.guildId }) }
     if (message.channel.isSendable()) message.channel.sendTyping().catch(() => {})
     instance.thread.push(event)

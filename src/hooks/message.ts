@@ -31,7 +31,6 @@ const allowed = (userId: string) => {
 
 export default async (message: Message, instance: any, kernel: typeof Kernel) => {
     const me = message.client.user
-    if (!message.guildId) console.log(`dm-debug: hook got DM ${message.id} from ${message.author.username}, isDMBased=${message.channel?.isDMBased?.()}, thread busy=${instance.thread?.busy}, queue version=${instance.threadVersion}/${kernel.state.version}`)
     if (message.author.id === me.id) return
     const addressed = message.channel.isDMBased()
         || message.mentions.users.has(me.id)

@@ -14,7 +14,7 @@ discord events get fed into a single agent session. its only tool is `bash`, a v
 ```
 
 `discord <METHOD> <route> [json]` hits the whole REST API. it changes itself by editing `/src` and
-running `deploy`, which typechecks, tests, commits and hot-reloads. only `src/kernel.ts` needs a restart.
+running `deploy`, which typechecks, tests and hot-reloads. only `src/kernel.ts` needs a restart.
 
 ## running
 

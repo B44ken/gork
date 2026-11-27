@@ -27,7 +27,7 @@ const run = async (cmd: string[]) => {
     return { ok: (await proc.exited) === 0, out: out.trim() }
 }
 
-// Nothing reaches the live process unless it typechecks and the tests pass; every live version is a commit.
+// Nothing reaches the live process unless it typechecks and the tests pass. Git is left to the humans.
 let deploying: Promise<string> | undefined
 const deploy = () => deploying ??= (async () => {
     try {
@@ -35,8 +35,6 @@ const deploy = () => deploying ??= (async () => {
             const result = await run(cmd)
             if (!result.ok) return `${cmd.join(' ')} failed, nothing deployed:\n${result.out.slice(-6000)}`
         }
-        await run(['git', 'add', '-A'])
-        await run(['git', 'commit', '-qm', `deploy ${state.version + 1}`])
         for (const key of Object.keys(require.cache)) if (key.startsWith(src) && key !== self) delete require.cache[key]
         state.version++
         await reconcile()

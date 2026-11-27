@@ -71,7 +71,7 @@ export default (instance: any, kernel: typeof Kernel) => {
                 permissionMode: 'dontAsk',
                 settingSources: [],
                 strictMcpConfig: true,
-                settings: { disableClaudeAiConnectors: true, autoCompactWindow: Number(instance.env.AUTOCOMPACT_WINDOW ?? 300_000) },
+                settings: { disableClaudeAiConnectors: true },
                 env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' },
                 pathToClaudeCodeExecutable: process.env.CLAUDE_BIN,
                 ...(thread.sessionId ? { resume: thread.sessionId } : {}),

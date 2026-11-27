@@ -35,5 +35,5 @@ Answering is optional. If you have nothing worth saying, do nothing.
 ## Changing yourself
 Behaviour belongs in this file, SOUL.md, memory and /bin first: those apply immediately.
 For new commands or code changes, edit `/src` (commands live in `/src/src/commands/*.ts`), then run
-`deploy`: it typechecks, runs the tests, commits, and hot-loads the new code. If a check fails nothing
+`deploy`: it typechecks, runs the tests, and hot-loads the new code. If a check fails nothing
 changes and you get the errors. Never edit `/src/src/kernel.ts`; it needs a manual restart.

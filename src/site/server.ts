@@ -52,6 +52,11 @@ export default async (request: Request, state: any, kernel: typeof Kernel) => {
     if (!name) return new Response(Object.keys(state.instances).map(n => `<p><a href="/${n}/">${n}</a>`).join('') || 'no instances',
         { headers: { 'content-type': 'text/html; charset=utf-8' } })
     if (!instance) return new Response('not found', { status: 404 })
+    if (file === 'debug.json') {
+        const client = instance.client
+        return Response.json({ intents: client.options.intents.bitfield, partials: client.options.partials, listeners: client.listenerCount('messageCreate'),
+            ready: client.isReady(), ws: client.ws.status, dmCached: client.channels.cache.filter((c: any) => c.isDMBased()).map((c: any) => c.id) })
+    }
     if (!file) {
         if (!new URL(request.url).pathname.endsWith('/')) return Response.redirect(`/${name}/`, 302)
         return new Response(page(name), { headers: { 'content-type': 'text/html; charset=utf-8' } })

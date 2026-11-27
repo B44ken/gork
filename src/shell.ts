@@ -26,8 +26,11 @@ export const createShell = ({ workspace, root, chat, commands, env }: {
     env: { HOME: '/', PATH: '/bin:/usr/bin', ...env },
     customCommands: commands,
     // ponytail: off because every command is trusted host code (discord.js, fetch, Bun.spawn) that needs
-    // timers, network and processes, and the agent only runs bash: python and js-exec stay disabled.
+    // timers, network and processes. js-exec runs in QuickJS and curl is GET-only below; python stays disabled.
     // Revisit if those are ever enabled.
+    // curl/wget: GET/HEAD only, no private/LAN ranges, 10 MB cap. js-exec: sandboxed QuickJS.
+    network: { dangerouslyAllowFullInternetAccess: true, allowedMethods: ['GET', 'HEAD'], denyPrivateRanges: true, maxResponseSize: 10 * 1024 * 1024, timeoutMs: 30_000 },
+    javascript: true,
     defenseInDepth: false,
 })
 

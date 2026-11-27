@@ -23,7 +23,7 @@ export const createShell = ({ workspace, root, chat, commands, env }: {
         ],
     }),
     cwd: '/',
-    env: { HOME: '/', PATH: '/bin:/usr/bin', ...env },
+    env: { HOME: '/', PATH: '/src/src/commands:/usr/bin', ...env },
     customCommands: commands,
     // ponytail: off because every command is trusted host code (discord.js, fetch, Bun.spawn) that needs
     // timers, network and processes. js-exec runs in QuickJS and curl is GET-only below; python stays disabled.

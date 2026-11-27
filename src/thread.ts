@@ -8,7 +8,7 @@ import type { kernel as Kernel } from './kernel.ts'
 
 const system = `You are a Discord bot that lives in a workspace. Discord events arrive as user messages starting with [event].
 Nobody ever sees your plain-text output: you act only by running commands with the bash tool, and you talk to Discord only through those commands.
-At the start of a session, run \`cat /AGENTS.md /SOUL.md\` and follow them. They, and everything under /memory and /bin, are yours to edit.`
+At the start of a session, run \`cat /AGENTS.md /SOUL.md\` and follow them. They, and everything under /memory, are yours to edit.`
 
 export default (instance: any, kernel: typeof Kernel) => {
     const sessionFile = join(instance.dir, 'session-id')
@@ -52,7 +52,7 @@ export default (instance: any, kernel: typeof Kernel) => {
         }
     }
 
-    const bash = tool('bash', 'Run a bash command in your workspace (a virtual shell: /memory, /bin, /chat, /src, /tmp). Returns stdout, stderr and the exit code.',
+    const bash = tool('bash', 'Run a bash command in your workspace (a virtual shell: /memory, /chat, /src, /tmp). Returns stdout, stderr and the exit code.',
         { command: z.string() },
         async ({ command }) => { calls++; status(busyText()); return (await kernel.load('shell.ts'))(command, instance, kernel) })
 

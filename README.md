@@ -8,7 +8,7 @@ discord events get fed into a single agent session. its only tool is `bash`, a v
 ```
 /AGENTS.md /SOUL.md   how it works, who it is
 /memory/              notes, one file per user and channel
-/bin/                 its own scripts (reply.sh, react.sh, ...)
+/src/src/commands/    its commands: .sh scripts and .ts code, on PATH
 /chat/                discord as lazy read-only files: channel/<id>.md, attachments
 /src/                 this repo
 ```

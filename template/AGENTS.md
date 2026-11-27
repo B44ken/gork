@@ -15,7 +15,6 @@ Answering is optional. If you have nothing worth saying, do nothing.
 - `/memory/MEMORY.md` general notes; `/memory/user/<user id>.md` one file per person;
   `/memory/channel/<channel id>.md` channel lore. Read the relevant files before answering someone,
   and write down what is worth remembering. Keep them short and current.
-- `/bin/`: your scripts, on PATH. Add helpers here; `chmod +x` them.
 - `/chat/` (read-only, live from Discord):
   - `/chat/channels.md` the channels you can see
   - `/chat/channel/<id>.md` the last 100 messages; `tail -n 500` / `head -n 50` fetch exactly that many
@@ -33,7 +32,12 @@ Answering is optional. If you have nothing worth saying, do nothing.
 - `search <query>` searches the web.
 
 ## Changing yourself
-Behaviour belongs in this file, SOUL.md, memory and /bin first: those apply immediately.
-For new commands or code changes, edit `/src` (commands live in `/src/src/commands/*.ts`), then run
-`deploy`: it typechecks, runs the tests, and hot-loads the new code. If a check fails nothing
-changes and you get the errors. Never edit `/src/src/kernel.ts`; it needs a manual restart.
+Behaviour belongs in this file, SOUL.md and memory first: those apply immediately.
+Commands live in `/src/src/commands/`, which is on PATH:
+- `name.sh` is a bash script built from existing commands (like reply.sh). `chmod +x` it; it works
+  as soon as it is saved.
+- `name.ts` is TypeScript running in the bot process, for things bash can't do (npm packages,
+  the Discord client). Run `deploy` after editing: it typechecks, runs the tests and hot-loads the code.
+  If a check fails nothing changes and you get the errors.
+Never edit `/src/src/kernel.ts`; it needs a manual restart. Your changes to /src are reviewed by a human
+before they are committed.

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversations</title>
+<link rel="stylesheet" href="archive.css">
+</head>
+<body>
+<header>
+  <h1>Conversations</h1>
+  <p id="summary">loading…</p>
+  <span class="spacer"></span>
+  <label>archive <select id="file"></select></label>
+  <button id="export-toggle" type="button">Export dataset</button>
+</header>
+
+<main>
+  <aside>
+    <fieldset>
+      <h2>Search</h2>
+      <label>text <input id="q" type="search" placeholder="words in the conversation"></label>
+      <div class="row">
+        <label>from <input id="from" type="date"></label>
+        <label>to <input id="to" type="date"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <h2>Channels <span id="channel-count" class="n"></span></h2>
+      <input id="channel-search" type="search" placeholder="filter channels">
+      <div id="channels" class="facets"></div>
+    </fieldset>
+
+    <fieldset>
+      <h2>Authors <span id="author-count" class="n"></span></h2>
+      <input id="author-search" type="search" placeholder="filter people">
+      <div id="authors" class="facets"></div>
+    </fieldset>
+
+    <fieldset>
+      <h2>Conversation</h2>
+      <div class="row">
+        <label>min turns <input id="minTurns" type="number" min="2" step="1" value="2"></label>
+        <label>min people <input id="minParticipants" type="number" min="1" step="1" value="2"></label>
+      </div>
+      <div class="row">
+        <label>min chars <input id="minChars" type="number" min="0" step="50" value="0"></label>
+        <label>max chars <input id="maxChars" type="number" min="0" step="500" value="0"></label>
+      </div>
+      <label title="Minutes of silence that start a new conversation">gap (min) <input id="gap" type="number" min="1" step="5" value="30"></label>
+      <label>attachments
+        <select id="attachments">
+          <option value="any">any</option>
+          <option value="yes">must have</option>
+          <option value="no">must not have</option>
+        </select>
+      </label>
+      <label class="inline"><input id="includeBots" type="checkbox" checked> include bot messages</label>
+      <label class="inline"><input id="dropUnanswered" type="checkbox" checked> drop unanswered last turn</label>
+      <label class="inline"><input id="clean" type="checkbox" checked> strip discord markup</label>
+      <button id="reset" type="button">Reset filters</button>
+    </fieldset>
+  </aside>
+
+  <section id="results">
+    <div class="head">
+      <label>sort
+        <select id="sort">
+          <option value="newest">newest</option>
+          <option value="oldest">oldest</option>
+          <option value="longest">longest</option>
+          <option value="messages">most messages</option>
+        </select>
+      </label>
+      <span id="count"></span>
+    </div>
+    <ul id="list"></ul>
+    <button id="more" type="button" hidden>Load more</button>
+  </section>
+
+  <section id="transcript"><p class="empty">Pick a conversation to read it.</p></section>
+</main>
+
+<dialog id="export">
+  <form method="dialog"><button type="submit" style="float:right">close</button></form>
+  <h2>Export dataset</h2>
+  <p id="export-stats" class="hint"></p>
+  <div class="grid">
+    <div class="row">
+      <label>format
+        <select id="format">
+          <option value="chatml">chatml (messages)</option>
+          <option value="sharegpt">sharegpt (conversations)</option>
+        </select>
+      </label>
+      <label>file name <input id="name" type="text" placeholder="math-union"></label>
+    </div>
+    <label>system prompt (optional)
+      <textarea id="system" rows="3" placeholder="you are a helpful UofT math student…"></textarea>
+    </label>
+    <label class="inline"><input id="metadata" type="checkbox"> include per-conversation metadata</label>
+    <div class="row">
+      <button id="download" class="primary" type="button">Download JSONL</button>
+      <button id="save" type="button">Save to exports/datasets/</button>
+    </div>
+    <p id="save-status"></p>
+    <p class="hint">chatml rows are <code>{"messages":[…]}</code>; sharegpt rows are <code>{"conversations":[…]}</code>. Both load with <code>load_dataset("json", …)</code>.</p>
+    <pre>from datasets import load_dataset
+dataset = load_dataset("json", data_files="exports/datasets/&lt;file&gt;.jsonl", split="train")
+
+# chatml: dataset["messages"] is the conversational format Unsloth/TRL expect.
+# sharegpt: run `standardize_sharegpt(dataset)` from unsloth before training.</pre>
+  </div>
+</dialog>
+
+<script src="archive.js" type="module"></script>
+</body>
+</html>

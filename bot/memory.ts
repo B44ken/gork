@@ -1,53 +1,72 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs'
-import { config } from '../db.json'
-type Memory = { facts: Record<string, string[]> }
+import type { StateStore } from './state.ts'
 
-if(!existsSync('db.json')) writeFileSync('db.json', '{}')
-export const load = (): Memory => JSON.parse(readFileSync('db.json', 'utf-8'))
-export const save = (mem: Memory) => writeFileSync('db.json', JSON.stringify(mem, null, 4))
-
-export const addFact = ({ user, fact }: { user: string, fact: string }) => {
-    const m: Memory = load()
-    if (!m.facts[user]) m.facts[user] = []
-    m.facts[user] = [...new Set([...m.facts[user], fact])]
-    save(m)
+const idFor = (id: string) => {
+    if (!/^\d{17,20}$/.test(id)) throw new Error('expected a discord user id')
+    return id
 }
 
-export const deleteFact = ({ user, fact }: { user: string, fact: string }) => {
-    const m: Memory = load()
-    if (!m.facts[user]) return
-    m.facts[user] = m.facts[user].filter(f => f != fact)
-    save(m)
+export type MemoryUser = { id: string, username: string, displayName: string }
+
+export type Memory = {
+    load: StateStore['read'],
+    save: (memory: { facts: Record<string, string[]> }) => void,
+    addFact: (fact: { userId: string, fact: string }) => void,
+    deleteFact: (fact: { userId: string, fact: string }) => void,
+    listFacts: (userId: string) => string,
+    deleteFactAt: (userId: string, number: number) => string,
+    nukeFacts: (userId?: string) => string,
+    buildFacts: (users: MemoryUser[]) => string,
 }
 
-export const buildFacts = (...users: string[]) => 
-    Object.entries(load().facts)
-        .filter(([k]) => users.includes(k))
-        .map(([k, facts]) => `${k}:\n${facts.map(f => ` - ${f}`).join('\n')}`)
-        .join('\n')
+export const createMemory = (store: StateStore): Memory => {
+    const load = store.read
+    const save = (memory: { facts: Record<string, string[]> }) => store.update(state => { state.facts = memory.facts })
 
-export const setConfig = ({ key, value }: { key: string, value: string }) => {
-    if (key == 'context') {
-        const v = Number(value)
-        if (!Number.isInteger(v) || v < 1) return 'context must be an integer >= 1'
-        config.context = v
-    } else if (key == 'thinking') {
-        if (value != 'none' && value != 'low') return 'thinking must be one of: none, low'
-        config.thinking = value
-    } else if (key == 'waffle.chance') {
-        const v = Number(value)
-        if (Number.isNaN(v) || v < 0 || v > 1) return 'waffle.chance must be a number between 0 and 1'
-        config.waffle.chance = v
-    } else if (key == 'waffle.after_msgs') {
-        const v = Number(value)
-        if (!Number.isInteger(v) || v < 0) return 'waffle.after_msgs must be an integer >= 0'
-        config.waffle.after_msgs = v
-    } else {
-        return 'unknown key. use one of: context, thinking, waffle.chance, waffle.after_msgs'
+    const addFact = ({ userId, fact }: { userId: string, fact: string }) => {
+        userId = idFor(userId)
+        const m = load()
+        if (!m.facts[userId]) m.facts[userId] = []
+        m.facts[userId] = [...new Set([...m.facts[userId], fact])]
+        save(m)
     }
 
-    const db = JSON.parse(readFileSync('db.json', 'utf-8'))
-    db.config = config
-    writeFileSync('db.json', JSON.stringify(db, null, 4))
-    return `set config.${key}=${value}`
+    const deleteFact = ({ userId, fact }: { userId: string, fact: string }) => {
+        userId = idFor(userId)
+        const m = load()
+        if (!m.facts[userId]) return
+        m.facts[userId] = m.facts[userId].filter(f => f != fact)
+        save(m)
+    }
+
+    const listFacts = (userId: string) => {
+        const facts = load().facts[idFor(userId)] || []
+        return facts.length ? facts.map((fact, i) => `${i + 1}. ${fact}`).join('\n') : `no memories for ${userId}`
+    }
+
+    const deleteFactAt = (userId: string, number: number) => {
+        const m = load()
+        const facts = m.facts[idFor(userId)] || []
+        if (!Number.isInteger(number) || number < 1 || number > facts.length) return `no memory ${number} for ${userId}`
+        const [fact] = facts.splice(number - 1, 1)
+        save(m)
+        return `deleted memory ${number} for ${userId}: ${fact}`
+    }
+
+    const nukeFacts = (userId?: string) => {
+        const m = load()
+        if (userId !== undefined) delete m.facts[idFor(userId)]
+        else m.facts = {}
+        save(m)
+        return userId !== undefined ? `cleared memories for ${userId}` : 'cleared all memories'
+    }
+
+    const buildFacts = (users: MemoryUser[]) => {
+        const facts = load().facts
+        return users
+            .filter(user => facts[user.id]?.length)
+            .map(user => `id: ${user.id}, username: ${user.username}, display name: ${user.displayName}:\n${facts[user.id].map(f => ` - ${f}`).join('\n')}`)
+            .join('\n')
+    }
+
+    return { load, save, addFact, deleteFact, listFacts, deleteFactAt, nukeFacts, buildFacts }
 }

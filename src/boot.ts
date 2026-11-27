@@ -22,9 +22,11 @@ export default async (state: any, kernel: K) => {
         const dir = resolve(kernel.root, directory)
         const instance = state.instances[name] ??= { name, dir, workspace: join(dir, 'workspace') }
         // config.json in the instance dir (preferred) overrides the legacy .env.local; both optional.
-        const envFile = join(dir, '.env.local'), jsonFile = join(dir, 'config.json')
+        // /src/config.json holds non-secret settings (agent-editable); secrets stay in the instance dir.
+        const envFile = join(dir, '.env.local'), jsonFile = join(dir, 'config.json'), shared = join(kernel.root, 'config.json')
         instance.env = {
             ...(existsSync(envFile) ? parseEnv(envFile) : {}),
+            ...(existsSync(shared) ? JSON.parse(readFileSync(shared, 'utf8')) as Record<string, string> : {}),
             ...(existsSync(jsonFile) ? JSON.parse(readFileSync(jsonFile, 'utf8')) as Record<string, string> : {}),
         }
         if (!existsSync(instance.workspace)) cpSync(join(kernel.root, 'template'), instance.workspace, { recursive: true })
